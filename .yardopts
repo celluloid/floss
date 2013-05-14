@@ -1,0 +1,3 @@
+--markup=markdown
+--charset=utf-8
+lib/**/*.rb
