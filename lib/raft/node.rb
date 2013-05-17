@@ -144,6 +144,18 @@ class Raft::Node
     self.voted_for = nil
   end
 
+  def respond_to?(symbol, include_all = false)
+    super || state.respond_to?(symbol, include_all)
+  end
+
+  def method_missing(symbol, *arguments, &block)
+    if state.respond_to?(symbol)
+      return state.send(symbol, *arguments, &block)
+    end
+
+    super
+  end
+
   %w(info debug warn error).each do |m|
     define_method(m) do |str|
       super("[#{id}] #{str}")
