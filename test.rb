@@ -2,12 +2,21 @@ $: << File.expand_path('../lib', __FILE__)
 
 require 'raft/node'
 
-cluster = ['tcp://127.0.0.1:50010', 'tcp://127.0.0.1:50011', 'tcp://127.0.0.1:50012']
+CLUSTER_SIZE = 5
 
-cluster.size.times do |i|
-  nodes = cluster.rotate(i)
-
-  Raft::Node.new(listen: nodes.first, peers: nodes[1..-1]).run
+nodes = CLUSTER_SIZE.times.map do |i|
+  port = 50000 + i
+  "tcp://127.0.0.1:#{port}"
 end
+
+supervisor = Celluloid::SupervisionGroup.run!
+
+CLUSTER_SIZE.times.map do |i|
+  combination = nodes.rotate(i)
+  options = {listen: combination.first, peers: combination[1..-1]}
+  supervisor.supervise(Raft::Node, options)
+end
+
+supervisor.actors.each(&:run)
 
 sleep
