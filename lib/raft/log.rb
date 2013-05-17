@@ -14,11 +14,8 @@ class Raft::Log
     # @return [Object] A replicated state machine command.
     attr_accessor :command
 
-    # @return [Boolean]
-    attr_accessor :committed
-
-    def committed?
-
+    def initialize(attrs)
+      attrs.each { |k, v| send("#{k}=", v) }
     end
   end
 
@@ -29,16 +26,9 @@ class Raft::Log
     self.entries = []
   end
 
-  def append(prev_log_index, prev_log_term, new_entries)
-    if validate(prev_log_index, prev_log_term)
-      # Remove all entries after the previous one.
-      remove_starting_with(prev_log_index + 1)
-      entries.concat(new_entries)
-
-      true
-    else
-      false
-    end
+  def append(array_or_object)
+    array_or_object = array_or_object.is_a?(Array) ? array_or_object : [array_or_object]
+    entries.concat(array_or_object)
   end
 
   def last_index

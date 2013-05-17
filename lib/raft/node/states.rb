@@ -82,7 +82,12 @@ module Raft::Node::State
 
       timeout.reset
 
-      success = node.log.append(payload[:prev_log_index], payload[:prev_log_term], payload[:entries])
+      success = if payload[:entries].any?
+        node.log.append(payload[:prev_log_index], payload[:prev_log_term], payload[:entries])
+      else
+        true
+      end
+
       return {term: node.term, success: success}
       # TODO 8.! Apply newly committed entries to state machine (§5.3)
     end
@@ -177,8 +182,8 @@ module Raft::Node::State
 
       payload = {
         term: node.term,
-        last_log_term: node.last_log_term,
-        last_log_index: node.last_log_index,
+        last_log_term: node.log.last_term,
+        last_log_index: node.log.last_index,
         candidate_id: node.id
       }
 

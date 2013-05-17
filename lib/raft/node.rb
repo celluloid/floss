@@ -36,12 +36,6 @@ class Raft::Node
   # @return [Fixnum] The current term.
   attr_accessor :term
 
-  # @return [Fixnum] Term of the last log entry.
-  attr_accessor :last_log_term
-
-  # @return [Fixnum] Index of the last log entry.
-  attr_accessor :last_log_index
-
   # @return [Raft::RPC::Server]
   attr_accessor :server
 
@@ -51,8 +45,6 @@ class Raft::Node
   def initialize(options = {})
     self.options = options
     self.term = 0
-    self.last_log_term = 0
-    self.last_log_index = 0
     self.log = Raft::Log.new
   end
 
