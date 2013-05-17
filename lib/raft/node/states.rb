@@ -1,4 +1,5 @@
 require 'delegate'
+require 'raft/latch'
 require 'raft/node'
 
 module Raft::Node::State
@@ -129,13 +130,21 @@ module Raft::Node::State
     attr_accessor :timeout
     attr_accessor :election
 
+    # @return [Fixnum] Number of received votes.
+    attr_accessor :votes
+
     def enter_state
+      self.election = Raft::Latch.new
+      self.votes = 0
+
+      set_timeout
+      collect_votes
+
+      async.wait_for_election
+    end
+
+    def wait_for_election
       begin
-        self.election = Celluloid::Condition.new
-
-        set_timeout
-        collect_votes
-
         result, value = election.wait
         self.timeout.cancel if timeout
 
@@ -158,14 +167,14 @@ module Raft::Node::State
 
     def set_timeout
       unless timeout
-        self.timeout = Celluloid.after(node.random_timeout*2) { election.signal([:timeout]) }
+        self.timeout = Celluloid.after(node.random_timeout*2) { election.signal(:timeout) }
       else
         timeout.reset
       end
     end
 
     def handle_append_entries(payload)
-      election.signal([:new_leader_detected])
+      election.signal(:new_leader_detected)
     end
 
     def handle_vote_request(message)
@@ -178,8 +187,6 @@ module Raft::Node::State
     end
 
     def collect_votes
-      votes = 0
-
       payload = {
         term: node.term,
         last_log_term: node.log.last_term,
@@ -187,29 +194,31 @@ module Raft::Node::State
         candidate_id: node.id
       }
 
-      node.options[:peers].each do |peer|
-        Celluloid::Future.new do
-          node.debug('[RPC] Requesting vote from ' + peer)
-          response = node.client.vote_request(peer, payload)
-          node.debug("[RPC] Response from peer #{peer}: #{response.inspect}")
-
-          # Step down when a higher term is detected.
-          # Accept votes from peers in the same term.
-          # Ignore votes from peers with an older term.
-          if response[:term] > node.term
-            election.signal([:higher_term_detected, response[:term]])
-          elsif response[:term] == node.term
-            votes += 1 if response[:vote_granted]
-
-            # Is this node winning?
-            if votes >= node.cluster_quorum
-              election.signal([:success, votes])
-            end
-          end
-        end
+      node.options[:peers].map do |peer|
+        async.request_vote(peer, payload)
       end
 
       nil
+    end
+
+    def request_vote(peer, payload)
+      node.debug('[RPC] Requesting vote from ' + peer)
+      response = node.client.vote_request(peer, payload)
+      node.debug("[RPC] Response from peer #{peer}: #{response.inspect}")
+
+      # Step down when a higher term is detected.
+      # Accept votes from peers in the same term.
+      # Ignore votes from peers with an older term.
+      if response[:term] > node.term
+        election.signal(:higher_term_detected, response[:term])
+      elsif response[:term] == node.term
+        self.votes += 1 if response[:vote_granted]
+
+        # Is this node winning?
+        if votes >= node.cluster_quorum
+          election.signal(:success, votes) unless election.ready?
+        end
+      end
     end
   end
 
