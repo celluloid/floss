@@ -1,6 +1,7 @@
 require 'delegate'
 require 'raft/latch'
 require 'raft/node'
+require 'raft/peer'
 
 module Raft::Node::State
   class Base < Delegator
@@ -194,7 +195,7 @@ module Raft::Node::State
         candidate_id: node.id
       }
 
-      node.options[:peers].map do |peer|
+      peers.map do |peer|
         async.request_vote(peer, payload)
       end
 
@@ -202,9 +203,7 @@ module Raft::Node::State
     end
 
     def request_vote(peer, payload)
-      node.debug('[RPC] Requesting vote from ' + peer)
-      response = node.client.vote_request(peer, payload)
-      node.debug("[RPC] Response from peer #{peer}: #{response.inspect}")
+      response = peer.request_vote(payload)
 
       # Step down when a higher term is detected.
       # Accept votes from peers in the same term.

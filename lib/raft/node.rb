@@ -24,9 +24,6 @@ class Raft::Node
   # @return [Hash]
   attr_accessor :options
 
-  # @return [Array<String>] Peers as configured in this cluster.
-  attr_accessor :peers
-
   # @return [Raft::Node::State::Base] The current state of this node.
   attr_accessor :state
 
@@ -50,7 +47,6 @@ class Raft::Node
 
   def run
     self.server = link(Raft::RPC::Server.new(options[:listen], &method(:handle_rpc)))
-    self.client = link(Raft::RPC::Client.new)
     server.run
     switch_state(:follower)
   end
@@ -80,9 +76,9 @@ class Raft::Node
   end
 
   # Returns peers in the cluster.
-  # @return [Array<String>]
+  # @return [Array<Raft::Peer>]
   def peers
-    options[:peers]
+    @peers ||= options[:peers].map { |peer| link(Raft::Peer.new(peer)) }
   end
 
   # Returns the cluster's quorum.
@@ -94,7 +90,7 @@ class Raft::Node
   # Returns the number of nodes in the cluster.
   # @return [Fixnum]
   def cluster_size
-    options[:peers].size + 1
+    peers.size + 1
   end
 
   # The interval between heartbeats (in seconds). See Section 5.7.
