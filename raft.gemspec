@@ -17,4 +17,5 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'rspec'
   gem.add_runtime_dependency 'celluloid-zmq'
+  gem.add_runtime_dependency 'celluloid-io'
 end

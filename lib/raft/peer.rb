@@ -1,53 +1,30 @@
 require 'raft'
-require 'celluloid/zmq'
 
 # A peer is a remote node within the same cluster.
 class Raft::Peer
-  include Celluloid::ZMQ
   include Celluloid::Logger
-
-  exclusive :call
 
   # @return [String] Remote address of the peer.
   attr_accessor :id
 
   # @return [Celluloid::ZMQ::ReqSocket]
-  attr_accessor :socket
+  # attr_accessor :socket
 
-  def initialize(id)
+  # @return [Raft::RPC::Client]
+  attr_accessor :client
+
+  def initialize(id, opts = {})
     self.id = id
-    connect
-  end
 
-  def connect
-    socket = ReqSocket.new
-    socket.connect(id)
-    self.socket = socket
-  end
-
-  def disconnect
-    socket.close if socket
-    self.socket = nil
+    client_class = opts[:client_class] || Raft::RPC::Client::ZMQ
+    self.client = client_class.new(id)
   end
 
   def append_entries(payload)
-    call(:append_entries, payload)
+    client.call(:append_entries, payload)
   end
 
   def request_vote(payload)
-    call(:vote_request, payload)
-  end
-
-  def call(command, payload)
-    socket.send(encode_request(command, payload))
-    decode_response(socket.read)
-  end
-
-  def encode_request(command, payload)
-    "#{command}:#{Marshal.dump(payload)}"
-  end
-
-  def decode_response(response)
-    Marshal.load(response)
+    client.call(:vote_request, payload)
   end
 end

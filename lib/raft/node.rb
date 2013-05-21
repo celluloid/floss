@@ -78,7 +78,7 @@ class Raft::Node
   # Returns peers in the cluster.
   # @return [Array<Raft::Peer>]
   def peers
-    @peers ||= options[:peers].map { |peer| link(Raft::Peer.new(peer)) }
+    @peers ||= options[:peers].map { |peer| Raft::Peer.new(peer) }
   end
 
   # Returns the cluster's quorum.
