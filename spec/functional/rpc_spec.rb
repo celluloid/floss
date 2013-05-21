@@ -39,12 +39,15 @@ shared_examples 'an RPC implementation' do
     actor_run { calls.map { |args| client.call(*args) } }.should eq(calls)
   end
 
-  it 'raises an error if server is unavailable' do
-    p 'foo'
-    expect do
-      client = client_class.new(address)
-      actor_run { client.call(:command, :payload) } 
-    end.to raise_error(Raft::ServerUnavailableError)
+  it 'raises an error if server is not available' do
+     client = client_class.new(address)
+     expect { actor_run { client.call(:command, :payload) } }.to raise_error(Raft::TimeoutError)
+  end
+
+  it 'raises an error if server does not respond in time' do
+    server = server_class.new(address) { |command, payload| sleep 1.5; [command, payload] }
+    client = client_class.new(address)
+    expect { actor_run { client.call(:command, :payload) } }.to raise_error(Raft::TimeoutError)
   end
 end
 

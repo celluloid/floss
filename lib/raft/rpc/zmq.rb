@@ -4,25 +4,46 @@ require 'celluloid/zmq'
 
 class Raft::RPC::ZMQ
   class Client < Raft::RPC::Client
+    include Celluloid::ZMQ
+
     # @return [Celluloid::IO::Stream::Latch]
     attr_accessor :latch
+
+    attr_accessor :address
 
     # @return [Celluloid::ZMQ::ReqSocket]
     attr_accessor :socket
 
     def initialize(address)
       self.latch = Celluloid::IO::Stream::Latch.new
+      self.address = address
+      connect
+    end
+
+    def connect
       self.socket = Celluloid::ZMQ::ReqSocket.new
       socket.connect(address)
     end
 
+    def disconnect
+      socket.close if socket
+    end
+
     def call(command, payload)
-      request = encode_request(command, payload)
-      response = latch.synchronize do
-        socket.send(request)
+      message = encode_request(command, payload)
+      response = latch.synchronize { request(message) }
+      decode_response(response)
+    end
+
+    def request(message)
+      timeout(Raft::RPC::TIMEOUT) do
+        socket.send(message)
         socket.read
       end
-      decode_response(response)
+    rescue Celluloid::Task::TimeoutError
+      disconnect
+      connect
+      raise Raft::TimeoutError
     end
 
     def encode_request(command, payload)
@@ -31,10 +52,6 @@ class Raft::RPC::ZMQ
 
     def decode_response(response)
       Marshal.load(response)
-    end
-
-    def disconnect
-      socket.close if socket
     end
   end
 
@@ -72,7 +89,6 @@ class Raft::RPC::ZMQ
 
     # @param [String] request  A request string containing command and payload separated by a colon.
     def handle(request)
-      p request
       command, payload = decode_request(request)
       response = handler.call(command, payload)
       socket.send(encode_response(response))

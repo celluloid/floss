@@ -1,6 +1,8 @@
 require 'raft'
 
 module Raft::RPC
+  TIMEOUT = 0.3
+
   class Client
     def call(command, payload)
       raise NotImplementedError

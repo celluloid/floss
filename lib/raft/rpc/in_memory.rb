@@ -2,6 +2,8 @@ require 'raft/rpc'
 
 class Raft::RPC::InMemory
   class Client < Raft::RPC::Client
+    include Celluloid
+
     attr_accessor :address
 
     def initialize(address)
@@ -9,11 +11,9 @@ class Raft::RPC::InMemory
     end
 
     def call(command, payload)
-      begin
-        actor.execute(command, payload)
-      rescue Celluloid::DeadActorError
-        raise Raft::ServerUnavailableError
-      end
+      timeout(Raft::RPC::TIMEOUT) { actor.execute(command, payload) }
+    rescue Celluloid::DeadActorError, Celluloid::Task::TimeoutError
+      raise Raft::TimeoutError
     end
 
     def actor
