@@ -5,7 +5,7 @@ require 'raft'
 class Raft::Log
   extend Forwardable
 
-  def_delegators :entries, :[]
+  def_delegators :entries, :[], :empty?
 
   class Entry
     # @return [Fixnum] When the entry was received by the leader.
@@ -29,24 +29,32 @@ class Raft::Log
   def append(array_or_object)
     array_or_object = array_or_object.is_a?(Array) ? array_or_object : [array_or_object]
     entries.concat(array_or_object)
+
+    true
   end
 
+  # Returns the last index in the log or nil if the log is empty.
   def last_index
-    entries.size - 1
+    entries.any? ? entries.size - 1 : nil
   end
 
+  # Returns the term of the last entry in the log or nil if the log is empty.
   def last_term
     entry = entries.last
-    entry ? entry.term : -1
+    entry ? entry.term : nil
   end
 
   def complete?(other_term, other_index)
+    # Special case: Accept the first entry if the log is empty.
+    return empty? if other_term.nil? && other_index.nil?
+
     (other_term > last_term) || (other_term == last_term && other_index >= last_index)
   end
 
-  protected
-
   def validate(index, term)
+    # Special case: Accept the first entry if the log is empty.
+    return empty? if index.nil? && term.nil?
+
     entry = entries[index]
     entry && entry.term == term
   end

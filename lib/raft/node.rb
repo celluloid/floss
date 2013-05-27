@@ -1,13 +1,12 @@
 # encoding: utf-8
 
-require 'celluloid/zmq'
-require 'raft/rpc'
+require 'raft/rpc/zmq'
 require 'raft/log'
 
 class Raft::Node
   require 'raft/node/states'
 
-  include Celluloid::ZMQ
+  include Celluloid
   include Celluloid::Logger
 
   # Default broadcast time.
@@ -46,9 +45,11 @@ class Raft::Node
   end
 
   def run
-    self.server = link(Raft::RPC::Server.new(options[:listen], &method(:handle_rpc)))
-    server.run
+    self.server = link(Raft::RPC::ZMQ::Server.new(options[:listen], &method(:handle_rpc)))
+
     switch_state(:follower)
+
+    self
   end
 
   # Execute a command on the replicated state machine.
@@ -61,7 +62,7 @@ class Raft::Node
   end
 
   def switch_state(new_state)
-    current_state = state ? state.class.name.split('::').last.downcase : nil
+    current_state = state ? state.class.name.split('::').last.downcase : 'nil'
     info("[TRANSITION] #{current_state} => #{new_state}")
 
     self.state.exit_state if state
@@ -79,6 +80,10 @@ class Raft::Node
   # @return [Array<Raft::Peer>]
   def peers
     @peers ||= options[:peers].map { |peer| Raft::Peer.new(peer) }
+  end
+
+  def terminate
+    state.exit_state if state
   end
 
   # Returns the cluster's quorum.

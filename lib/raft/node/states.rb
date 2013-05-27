@@ -33,11 +33,9 @@ module Raft::Node::State
     end
 
     def handle_rpc(command, payload)
-      info("Received RPC: #{command} #{payload}")
-
-      if command == 'vote_request'
+      if command == :vote_request
         handle_vote_request(payload)
-      elsif command == 'append_entries'
+      elsif command == :append_entries
         handle_append_entries(payload)
       else
         {error: 'Unknown command.'}
@@ -71,6 +69,7 @@ module Raft::Node::State
     end
 
     def handle_append_entries(payload)
+      info("[RPC] Received AppendEntries: #{payload}")
       term = payload[:term]
 
       unless node.validate_term(term)
@@ -85,7 +84,11 @@ module Raft::Node::State
       timeout.reset
 
       success = if payload[:entries].any?
-        node.log.append(payload[:prev_log_index], payload[:prev_log_term], payload[:entries])
+        if node.log.validate(payload[:prev_log_index], payload[:prev_log_term])
+          node.log.append(payload[:entries])
+        else
+          false
+        end
       else
         true
       end
@@ -176,6 +179,8 @@ module Raft::Node::State
 
     def handle_append_entries(payload)
       election.signal(:new_leader_detected)
+
+      super
     end
 
     def handle_vote_request(message)
@@ -222,108 +227,27 @@ module Raft::Node::State
   end
 
   class Leader < Base
-    # @return [Timers::Timer]
-    attr_accessor :heartbeat
-
-    # A map holding peers and their next index (Section 5.3).
-    #
-    # > The leader maintains a nextIndex for each follower, which is the index of the next log entry the leader will
-    # > send to that follower. 
-    attr_accessor :peer_indices
-
-    # @return [Fixnum] Index of the last entry known to be committed.
+    attr_accessor :pacemakers
+    attr_accessor :indices
     attr_accessor :commit_index
 
     def enter_state
-      # Send periodic heartbeats to all peers.
-      self.heartbeat = node.after(node.broadcast_time) do
-        send_heartbeat
-        heartbeat.reset
-      end
+      self.pacemakers = {}
+      self.indices = {}
 
-      # When a leader first comes to power it initializes all nextIndex values to the index just after the last one in
-      # its log (Section 5.3).
-      self.peer_indices = peers.each_with_object(Hash.new) { |peer, hash| hash[peer] = log.last_index + 1 }
+      peers.each do |peer|
+        indices[peer] = log.last_index
+        pacemakers[peer] = every(broadcast_time) { synchronize(peer) }
+      end
     end
 
     def exit_state
-      heartbeat.cancel
+      pacemakers.each_value(&:cancel)
     end
 
-    def send_heartbeat
-      payload = {
-        term: node.term,
-        leader_id: node.id,
-        prev_log_index: log.last_index,
-        prev_log_term: log.last_term,
-        entries: [],
-        commit_index: commit_index
-      }
-
-      client.multicall(peers, :append_entries, payload, node.broadcast_time)
-    end
-
-    def execute(*args)
-      entry = Entry.new(command: args, term: term)
-      log.append(entry)
-
-      payload = {
-        term: term,
-        leader_id: id,
-        prev_log_index: 0,
-        prev_log_term: 0,
-        entries: [entry],
-        commit_index: 0
-      }
-
-      # Replicate the command to all peers until it can be considered committed:
-      #
-      # > a log entry may only be considered committed if the entry is stored on a majority of the servers; in addition,
-      # > at least one entry from the leader's current term must also be stored on a majority of the servers (Section 5.4)
-      until committed?
-        client.multicall(:append_entries, payload, broadcast_time)
-      end
-      futures = peers.map { |peer| future.replicate_entry(entry, peer) }
-      quorum_wait(futures)
-
-      entry.committed = true
-
-      # Now execute the command.
-      entry.execute
-
-      result
-    end
-
-    def replicate_entry(entry, peer)
-      payload = {
-        term: node.term,
-        leader_id: node.id,
-        prev_log_index: log.last_index,
-        prev_log_term: log.last_term,
-        entries: [entry],
-        commit_index: commit_index
-      }
-
-      response = client.append_entry(peer, payload)
-
-      return true if response[:success]
-    end
-
-    def quorum_wait(futures)
-      condition = Condition.new
-      results = []
-
-      futures.each { |future| async.signal_when_done(condition, future) }
-
-      until results >= cluster_quorum
-        results << condition.wait
-      end
-
-      results
-    end
-
-    def signal_when_done(condition, future)
-      condition.signal(future.value)
+    def handle_append_entries(message)
+      debug 'Ouch, I shouldnt receive that RPC.'
+      raise 'Ouch, I shouldnt receive that RPC.'
     end
 
     def handle_vote_request(message)
@@ -334,7 +258,42 @@ module Raft::Node::State
       super
     end
 
-    def handle_append_entries(message)
+    def execute(*commands)
+      range = log.append(commands.map { |command| Raft::Log::Entry.new(command: command, term: term) })
+      peers.each { |peer| synchronize(peer) }
+    end
+
+    def synchronize(peer)
+      prev_index = indices[peer]
+
+      if prev_index
+        prev_term  = log[prev_index].term
+        curr_index = prev_index + 1
+        last_index = log.last_index
+        entries = log[curr_index..last_index]
+      else
+        prev_term = nil
+        entries = log[0..-1]
+        last_index = log.last_index
+      end
+
+      payload = {
+        term: term,
+        prev_log_index: prev_index,
+        prev_log_term: prev_term,
+        commit_index: commit_index,
+        entries: entries
+      }
+
+      response = peer.append_entries(payload)
+
+      pacemakers[peer].reset
+
+      if response[:success]
+        indices[peer] = last_index
+      else
+        indices[peer] -= 1 if indices[peer] && indices[peer] > 0
+      end
     end
   end
 end

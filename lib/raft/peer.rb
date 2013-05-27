@@ -16,7 +16,7 @@ class Raft::Peer
   def initialize(id, opts = {})
     self.id = id
 
-    client_class = opts[:client_class] || Raft::RPC::Client::ZMQ
+    client_class = opts[:client_class] || Raft::RPC::ZMQ::Client
     self.client = client_class.new(id)
   end
 
