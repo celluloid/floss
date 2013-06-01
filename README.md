@@ -53,7 +53,7 @@ comes into play.
     nodes = addresses.size.times.map do |i|
       combination = addresses.rotate(i)
       options = {listen: combination.first, peers: combination[1..-1]}
-      Raft::Node.new(listen: combination.first, peers: combination[1..-1]).tap { |node| node.run }
+      Raft::Node.new(listen: combination.first, peers: combination[1..-1])
     end
 
     # Give your nodes some time to start up.

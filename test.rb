@@ -17,6 +17,4 @@ CLUSTER_SIZE.times.map do |i|
   supervisor.supervise(Raft::Node, options)
 end
 
-supervisor.actors.each(&:run)
-
 sleep

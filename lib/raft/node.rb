@@ -50,6 +50,8 @@ class Raft::Node
     self.options = DEFAULT_OPTIONS.merge(options)
     self.term = 0
     self.log = Raft::Log.new
+
+    async.run
   end
 
   def run
