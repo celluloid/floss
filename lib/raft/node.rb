@@ -38,18 +38,31 @@ class Raft::Node
   # @return [Raft::RPC::Client]
   attr_accessor :client
 
-  def initialize(options = {})
-    self.options = options
+  DEFAULT_OPTIONS = {
+    rpc: Raft::RPC::ZMQ
+  }.freeze
+
+  # @param [Hash] options
+  # @option options [String] :id            A string identifying this node, often its RPC address.
+  # @option options [Array<String>] :peers  Identifiers of all peers in the cluster.
+  # @option options [Module,Class] :rpc     Namespace containing `Server` and `Client` classes.
+  def initialize(options = {}, &handler)
+    self.options = DEFAULT_OPTIONS.merge(options)
     self.term = 0
     self.log = Raft::Log.new
   end
 
   def run
-    self.server = link(Raft::RPC::ZMQ::Server.new(options[:listen], &method(:handle_rpc)))
-
+    self.server = link(rpc_server_class.new(id, &method(:handle_rpc)))
     switch_state(:follower)
+  end
 
-    self
+  def rpc_server_class
+    options[:rpc].const_get('Server')
+  end
+
+  def rpc_client_class
+    options[:rpc].const_get('Client')
   end
 
   # Execute a command on the replicated state machine.
@@ -73,13 +86,13 @@ class Raft::Node
   # Returns this node's id.
   # @return [String]
   def id
-    options[:listen]
+    options[:id]
   end
 
   # Returns peers in the cluster.
   # @return [Array<Raft::Peer>]
   def peers
-    @peers ||= options[:peers].map { |peer| Raft::Peer.new(peer) }
+    @peers ||= options[:peers].map { |peer| Raft::Peer.new(peer, rpc_client_class: rpc_client_class) }
   end
 
   def terminate

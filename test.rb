@@ -13,7 +13,7 @@ supervisor = Celluloid::SupervisionGroup.run!
 
 CLUSTER_SIZE.times.map do |i|
   combination = nodes.rotate(i)
-  options = {listen: combination.first, peers: combination[1..-1]}
+  options = {id: combination.first, peers: combination[1..-1]}
   supervisor.supervise(Raft::Node, options)
 end
 
