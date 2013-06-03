@@ -23,6 +23,7 @@ do with this library. Let's start with the counter service. It accepts three com
 The first simply returns the current count, the second sets the count to zero and the third changes the current count,
 optionally by a given amount.
 
+    ```ruby
     class Counter
       attr_accessor :count
 
@@ -30,49 +31,58 @@ optionally by a given amount.
         self.count = 0
       end
 
-      # Handle commands accepted by your cluster.
-      def execute(payload)
-        case command = payload[:command]
-        when 'GET'
-          self.count
-        when 'RESET'
-          self.count = 0
-        when 'INCREASE'
-          self.count += payload[:amount] || 1
-        else
-          "Invalid command: #{command}."
-        end
+      def get
+        count
+      end
+
+      def reset
+        self.count = 0
+      end
+
+      def increase(amount = 1)
+        self.count += amount
       end
     end
+    ```
 
 To increase reliability of your counter, you decide to distribute it across multiple machines. This is where `raft`
 comes into play.
 
+    ```ruby
     addresses = [10001, 10002, 10003].map { |port| "tcp://127.0.0.1:#{port}" }
 
-    nodes = addresses.size.times.map do |i|
+    $nodes = addresses.size.times.map do |i|
       combination = addresses.rotate(i)
       options = {listen: combination.first, peers: combination[1..-1]}
-      Raft::Node.new(listen: combination.first, peers: combination[1..-1])
+      Raft::Proxy.new(Counter.new, options)
     end
 
     # Give your nodes some time to start up.
-    sleep 0.5
+    $nodes.each(&:wait_until_ready)
+    ```
 
-    cluster.execute(command: 'GET') # => 0
-    cluster.execute(command: 'INCREASE') # => 1
-    cluster.execute(command: 'GET') # => 1
+Now we're ready to play with our distributed counter.
+
+    ```ruby
+    def random_node; $nodes.sample; end
+
+    random_node.get # => 0
+    random_node.increase # => 1
+    random_node.get # => 1
+    ```
 
 That was easy wasn't it? Let's see what happens if the cluster is damaged.
 
+    ```ruby
     # Terminate a random node in the cluster.
-    doomed_node = nodes.delete(nodes.sample)
+    doomed_node = $nodes.delete(random_node)
     doomed_node_id = doomed_node.id
     doomed_node.terminate
 
-    cluster.execute(command: 'INCREASE') # => 2
+    random_node.increase # => 2
+    ```
 
-Your cluster still works. If you'd kill another one, executing a command would result in an error because not enough
+Your cluster still works. If you'd kill another one, executing a command would result in an error because insufficient
 nodes are available to ensure your system's consistency.
 
 ## Contributing
