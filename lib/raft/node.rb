@@ -39,7 +39,8 @@ class Raft::Node
   attr_accessor :client
 
   DEFAULT_OPTIONS = {
-    rpc: Raft::RPC::ZMQ
+    rpc: Raft::RPC::ZMQ,
+    run: true
   }.freeze
 
   # @param [Hash] options
@@ -51,7 +52,7 @@ class Raft::Node
     self.term = 0
     self.log = Raft::Log.new
 
-    async.run
+    async.run unless opts[:run]
   end
 
   def run
