@@ -69,6 +69,8 @@ module Raft::Node::State
     end
 
     def handle_append_entries(payload)
+      ready.signal
+
       info("[RPC] Received AppendEntries: #{payload}")
       term = payload[:term]
 

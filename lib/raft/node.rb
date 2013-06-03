@@ -2,6 +2,7 @@
 
 require 'raft/rpc/zmq'
 require 'raft/log'
+require 'raft/one_off_latch'
 
 class Raft::Node
   require 'raft/node/states'
@@ -38,6 +39,9 @@ class Raft::Node
   # @return [Raft::RPC::Client]
   attr_accessor :client
 
+  # @return [Raft::OneOffLatch]
+  attr_accessor :ready
+
   DEFAULT_OPTIONS = {
     rpc: Raft::RPC::ZMQ,
     run: true
@@ -52,6 +56,7 @@ class Raft::Node
 
     self.term = 0
     self.log = Raft::Log.new
+    self.ready = Raft::OneOffLatch.new
 
     async.run if options[:run]
   end
@@ -59,6 +64,11 @@ class Raft::Node
   def run
     self.server = link(rpc_server_class.new(id, &method(:handle_rpc)))
     switch_state(:follower)
+  end
+
+  # Blocks until the node is ready for executing commands.
+  def wait_until_ready
+    ready.wait
   end
 
   def rpc_server_class
