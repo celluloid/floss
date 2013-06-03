@@ -48,11 +48,12 @@ class Raft::Node
   # @option options [Array<String>] :peers  Identifiers of all peers in the cluster.
   # @option options [Module,Class] :rpc     Namespace containing `Server` and `Client` classes.
   def initialize(options = {}, &handler)
-    self.options = DEFAULT_OPTIONS.merge(options)
+    self.options = options = DEFAULT_OPTIONS.merge(options)
+
     self.term = 0
     self.log = Raft::Log.new
 
-    async.run unless opts[:run]
+    async.run if options[:run]
   end
 
   def run
