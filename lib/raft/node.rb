@@ -12,7 +12,10 @@ class Raft::Node
   include Celluloid::Logger
 
   state(:follower, default: true, to: :candidate)
-  state(:candidate, to: [:leader, :follower]) { start_election }
+  state(:candidate, to: [:leader, :follower]) do
+    enter_new_term
+    start_election
+  end
   state(:leader, to: [:follower]) { info('I AM THE LEADER'); start_log_replication }
 
   # Default broadcast time.
