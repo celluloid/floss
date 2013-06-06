@@ -179,6 +179,7 @@ class Raft::Node
 
     if term > @current_term
       enter_new_term(term)
+      stop_log_replication if leader?
       transition(:follower) if candidate? || leader?
     end
 
@@ -214,6 +215,7 @@ class Raft::Node
     end
 
     # Step down if another node sends a valid AppendEntries RPC.
+    stop_log_replication if leader?
     transition(:follower) if candidate? || leader?
 
     # A valid AppendEntries RPC resets the election timeout.
