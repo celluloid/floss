@@ -5,18 +5,25 @@ require 'raft/log'
 require 'raft/peer'
 require 'raft/one_off_latch'
 require 'raft/count_down_latch'
+require 'raft/log_replicator'
 
 class Raft::Node
   include Celluloid
   include Celluloid::FSM
   include Celluloid::Logger
 
+  finalizer :finalize
+
   state(:follower, default: true, to: :candidate)
+
   state(:candidate, to: [:leader, :follower]) do
     enter_new_term
     start_election
   end
-  state(:leader, to: [:follower]) { info('I AM THE LEADER'); start_log_replication }
+
+  state(:leader, to: [:follower]) do
+    start_log_replication
+  end
 
   # Default broadcast time.
   # @see #broadcast_time
@@ -27,7 +34,9 @@ class Raft::Node
   ELECTION_TIMEOUT = (0.150..0.300)
 
   # @return [Raft::Log] The replicated log.
-  attr_accessor :log
+  attr_reader :log
+
+  attr_reader :current_term
 
   # @return [Raft::RPC::Server]
   attr_accessor :server
@@ -49,7 +58,7 @@ class Raft::Node
     @ready_latch = Raft::OneOffLatch.new
     @running = false
 
-    self.log = Raft::Log.new
+    @log = Raft::Log.new
 
     async.run if @options[:run]
   end
@@ -141,11 +150,48 @@ class Raft::Node
     end
   end
 
-  def execute(*commands)
-    range = log.append(commands.map { |command| Raft::Log::Entry.new(command: command, term: term) })
-    peers.each { |peer| synchronize(peer) }
-    range
+  def execute(entry)
+    if leader?
+      entry = Raft::Log::Entry.new(entry, @current_term)
+      @log_replicator.append(entry)
+      # entry.execute
+    else
+      raise "Cannot redirect command because leader is unknown." unless @leader_id
+      leader = peers.find { |peer| peer.id == @leader_id }
+      leader.execute(commands)
+    end
   end
+
+  def wait_for_quorum_commit(index)
+    latch = Raft::CountDownLatch.new(cluster_quorum)
+    peers.each { |peer| peer.signal_on_commit(index, latch) }
+    latch.wait
+  end
+
+  #def execute(*commands)
+  #  if leader?
+  #    # TODO: Reduce latency: Instantly sends commands to all peers instead of waiting for broadcast.
+  #    #
+  #    #       @pacemakers.each_value(&:cancel)
+  #    #       log.append(...)
+  #    #       @pacemakers.each_value(&:fire)
+  #    range = log.append(commands.map { |command| Raft::Log::Entry.new(command: command, term: @current_term) })
+  #    last_index = range.last
+
+  #    wait_for_quorum_
+  #    raise "A latch for index #{index} already exists." if @commit_latches[last_index]
+  #    latch = @commit_latches[last_index] = CountDownLatch.new(cluster_quorum)
+
+  #    latch.wait
+
+  #    # TODO: Wait for quorum of commits and return results.
+  #    range
+  #  else
+  #    raise "Cannot redirect command because leader is unknown." unless @leader_id
+  #    leader = peers.find { |peer| peer.id == @leader_id }
+  #    leader.execute(commands)
+  #  end
+  #end
 
   def handle_rpc(command, payload)
     handler = :"handle_#{command}"
@@ -158,6 +204,11 @@ class Raft::Node
   end
 
   protected
+
+  def handle_execute(commands)
+    raise 'Only the leader can accept commands.' unless leader?
+    execute(commands)
+  end
 
   # @param [Hash] request
   # @option message [Fixnum] :term            The candidate's term.
@@ -225,6 +276,7 @@ class Raft::Node
     success = if payload[:entries].any?
       if log.validate(payload[:prev_log_index], payload[:prev_log_term])
         log.append(payload[:entries])
+        true
       else
         false
       end
@@ -232,8 +284,18 @@ class Raft::Node
       true
     end
 
+    unless success
+      debug("[RPC] I did not accept AppendEntries: #{payload}")
+    end
+
     return {term: @current_term, success: success}
     # TODO 8.! Apply newly committed entries to state machine (§5.3)
+    #
+    # if commit_index < payload[:commit_index]
+    #   commit_index.upto(payload[:commit_index]) do |index|
+    #     FSM.execute(log[index])
+    #   end
+    # end
   end
 
   def on_election_timeout
@@ -295,50 +357,16 @@ class Raft::Node
   # @group Leader methods
 
   def start_log_replication
-    @pacemakers = {}
-    @indices = {}
-
-    peers.each do |peer|
-      @indices[peer] = log.last_index
-      @pacemakers[peer] = every(broadcast_time) { replicate_log_to(peer) }
-    end
+    raise "A log replicator is already running." if @log_replicator
+    @log_replicator = link Raft::LogReplicator.new(current_actor)
   end
 
   def stop_log_replication
-    @pacemakers.each(&:cancel)
-    @pacemakers.clear
+    @log_replicator.terminate
+    @log_replicator = nil
   end
 
-  def replicate_log_to(peer)
-    prev_index = @indices[peer]
-
-    if prev_index
-      prev_term  = log[prev_index].term
-      curr_index = prev_index + 1
-      last_index = log.last_index
-      entries = log[curr_index..last_index]
-    else
-      prev_term = nil
-      entries = log[0..-1]
-      last_index = log.last_index
-    end
-
-    payload = {
-      term: @current_term,
-      prev_log_index: prev_index,
-      prev_log_term: prev_term,
-      commit_index: @commit_index,
-      entries: entries
-    }
-
-    response = peer.append_entries(payload)
-
-    @pacemakers[peer].reset
-
-    if response[:success]
-      @indices[peer] = last_index
-    else
-      @indices[peer] -= 1 if @indices[peer] && @indices[peer] > 0
-    end
+  def finalize
+    @log_replicator.terminate if @log_replicator
   end
 end

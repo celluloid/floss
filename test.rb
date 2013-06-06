@@ -17,4 +17,35 @@ CLUSTER_SIZE.times.map do |i|
   supervisor.supervise(Raft::Node, options)
 end
 
-sleep
+sleep 1
+
+begin
+  leader = supervisor.actors.find(&:leader?)
+  puts "The leader is #{leader.id}"
+
+  leader.execute("Hello World!")
+rescue => e
+  puts "Couldn't execute my command!"
+  p e
+end
+
+sleep 1
+
+begin
+  leader = supervisor.actors.find(&:leader?)
+  puts "The leader is #{leader.id}"
+
+  leader.execute("Hello Again!")
+rescue => e
+  puts "Couldn't execute my command!"
+  p e
+end
+
+sleep 0.5
+
+supervisor.actors.each do |actor|
+  Celluloid.logger.info("Log of #{actor.id}: #{actor.log.entries}")
+end
+
+sleep 1
+exit

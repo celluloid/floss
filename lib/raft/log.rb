@@ -3,6 +3,7 @@ require 'raft'
 
 # See Section 5.3.
 class Raft::Log
+  include Celluloid
   extend Forwardable
 
   def_delegators :entries, :[], :empty?
@@ -14,8 +15,11 @@ class Raft::Log
     # @return [Object] A replicated state machine command.
     attr_accessor :command
 
-    def initialize(attrs)
-      attrs.each { |k, v| send("#{k}=", v) }
+    def initialize(command, term)
+      raise ArgumentError, "Term must be a Fixnum." unless term.is_a?(Fixnum)
+
+      self.term = term
+      self.command = command
     end
   end
 
@@ -30,10 +34,12 @@ class Raft::Log
   def append(new_entries)
     raise ArgumentError, 'The passed array is empty.' if new_entries.empty?
 
-    first_index = entries.size
-    last_index = first_index + new_entries.size
     entries.concat(new_entries)
-    (first_index..last_index)
+    last_index
+  end
+
+  def starting_with(index)
+    entries[index..-1]
   end
 
   # Returns the last index in the log or nil if the log is empty.

@@ -8,9 +8,6 @@ class Raft::Peer
   # @return [String] Remote address of the peer.
   attr_accessor :id
 
-  # @return [Celluloid::ZMQ::ReqSocket]
-  # attr_accessor :socket
-
   # @return [Raft::RPC::Client]
   attr_accessor :client
 
@@ -19,6 +16,10 @@ class Raft::Peer
 
     client_class = opts[:rpc_client_class] || Raft::RPC::ZMQ::Client
     self.client = client_class.new(id)
+  end
+
+  def execute(payload)
+    client.call(:execute, payload)
   end
 
   def append_entries(payload)
