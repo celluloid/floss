@@ -137,8 +137,6 @@ class Raft::Node
 
   states.each do |name, _|
     define_method(:"#{name}?") do
-      # TODO: FIXME: VERIFY
-      raise 'WTF' unless state.is_a?(Symbol)
       self.state == name
     end
   end
