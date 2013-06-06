@@ -26,11 +26,14 @@ class Raft::Log
     self.entries = []
   end
 
-  def append(array_or_object)
-    array_or_object = array_or_object.is_a?(Array) ? array_or_object : [array_or_object]
-    entries.concat(array_or_object)
+  # @param [Array] The entries to append to the log.
+  def append(new_entries)
+    raise ArgumentError, 'The passed array is empty.' if new_entries.empty?
 
-    true
+    first_index = entries.size
+    last_index = first_index + new_entries.size
+    entries.concat(new_entries)
+    (first_index..last_index)
   end
 
   # Returns the last index in the log or nil if the log is empty.
