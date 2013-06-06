@@ -170,31 +170,6 @@ class Raft::Node
     latch.wait
   end
 
-  #def execute(*commands)
-  #  if leader?
-  #    # TODO: Reduce latency: Instantly sends commands to all peers instead of waiting for broadcast.
-  #    #
-  #    #       @pacemakers.each_value(&:cancel)
-  #    #       log.append(...)
-  #    #       @pacemakers.each_value(&:fire)
-  #    range = log.append(commands.map { |command| Raft::Log::Entry.new(command: command, term: @current_term) })
-  #    last_index = range.last
-
-  #    wait_for_quorum_
-  #    raise "A latch for index #{index} already exists." if @commit_latches[last_index]
-  #    latch = @commit_latches[last_index] = CountDownLatch.new(cluster_quorum)
-
-  #    latch.wait
-
-  #    # TODO: Wait for quorum of commits and return results.
-  #    range
-  #  else
-  #    raise "Cannot redirect command because leader is unknown." unless @leader_id
-  #    leader = peers.find { |peer| peer.id == @leader_id }
-  #    leader.execute(commands)
-  #  end
-  #end
-
   def handle_rpc(command, payload)
     handler = :"handle_#{command}"
 
@@ -302,13 +277,6 @@ class Raft::Node
     end
 
     return {term: @current_term, success: success}
-    # TODO 8.! Apply newly committed entries to state machine (§5.3)
-    #
-    # if commit_index < payload[:commit_index]
-    #   commit_index.upto(payload[:commit_index]) do |index|
-    #     FSM.execute(log[index])
-    #   end
-    # end
   end
 
   def on_election_timeout
