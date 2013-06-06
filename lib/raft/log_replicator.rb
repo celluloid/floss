@@ -113,6 +113,7 @@ class Raft::LogReplicator
     end
 
     Hash[
+      leader_id: node.id,
       term: current_term,
       prev_log_index: prev_index,
       prev_log_term: prev_term,

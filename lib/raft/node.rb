@@ -270,6 +270,9 @@ class Raft::Node
     stop_log_replication if leader?
     transition(:follower) if candidate? || leader?
 
+    # Remember the leader.
+    @leader_id = payload[:leader_id]
+
     # A valid AppendEntries RPC resets the election timeout.
     @election_timeout.reset
 
