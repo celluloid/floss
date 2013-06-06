@@ -12,6 +12,7 @@ class Raft::Node
   include Celluloid::FSM
   include Celluloid::Logger
 
+  execute_block_on_receiver :initialize
   finalizer :finalize
 
   state(:follower, default: true, to: :candidate)
@@ -53,6 +54,7 @@ class Raft::Node
   def initialize(options = {}, &handler)
     super
 
+    @handler = handler
     @options = DEFAULT_OPTIONS.merge(options)
     @current_term = 0
     @ready_latch = Raft::OneOffLatch.new
@@ -154,11 +156,11 @@ class Raft::Node
     if leader?
       entry = Raft::Log::Entry.new(entry, @current_term)
       @log_replicator.append(entry)
-      # entry.execute
+      @handler.call(entry.command) if @handler
     else
       raise "Cannot redirect command because leader is unknown." unless @leader_id
       leader = peers.find { |peer| peer.id == @leader_id }
-      leader.execute(commands)
+      leader.execute(entry)
     end
   end
 
@@ -205,9 +207,9 @@ class Raft::Node
 
   protected
 
-  def handle_execute(commands)
+  def handle_execute(entry)
     raise 'Only the leader can accept commands.' unless leader?
-    execute(commands)
+    execute(entry)
   end
 
   # @param [Hash] request
@@ -286,6 +288,14 @@ class Raft::Node
     else
       true
     end
+
+    if payload[:commit_index] && @handler
+      (@commit_index ? @commit_index + 1 : 0).upto(payload[:commit_index]) do |index|
+        @handler.call(log[index].command) if @handler
+      end
+    end
+
+    @commit_index = payload[:commit_index]
 
     unless success
       debug("[RPC] I did not accept AppendEntries: #{payload}")
