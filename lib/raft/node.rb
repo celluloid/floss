@@ -299,6 +299,9 @@ class Raft::Node
     @votes.wait
 
     transition(:leader)
+
+    # Marks the node as ready for accepting commands.
+    @ready_latch.signal
   end
 
   def collect_votes
