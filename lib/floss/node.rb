@@ -173,7 +173,7 @@ class Floss::Node
   def handle_rpc(command, payload)
     handler = :"handle_#{command}"
 
-    if respond_to?(handler)
+    if respond_to?(handler, true)
       send(handler, payload)
     else
       abort ArgumentError.new('Unknown command.')
