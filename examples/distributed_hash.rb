@@ -30,5 +30,7 @@ proxies = Floss::TestHelper.cluster(ids) do |id, peers|
   Floss::Proxy.new(FSM.new, id: id, peers: peers)
 end
 
-proxies.sample.set(:foo, :bar)
-puts proxies.sample.get(:foo)
+100.times do |i|
+  proxies.sample.set(:foo, i)
+  raise "fail" unless proxies.sample.get(:foo) == i
+end
