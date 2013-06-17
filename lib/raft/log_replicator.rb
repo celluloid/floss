@@ -44,7 +44,7 @@ class Raft::LogReplicator
   attr_accessor :node
 
   def initialize(node)
-    self.node = node
+    @node = node
 
     @write_waiters = IndexWaiter.new
     @write_indices = {}
