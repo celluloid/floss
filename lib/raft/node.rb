@@ -60,8 +60,6 @@ class Raft::Node
     @ready_latch = Raft::OneOffLatch.new
     @running = false
 
-    @log = Raft::Log.new
-
     async.run if @options[:run]
   end
 
@@ -69,6 +67,7 @@ class Raft::Node
     raise 'Already running' if @running
 
     @running = true
+    @log = Raft::Log.new
 
     self.server = link(rpc_server_class.new(id, &method(:handle_rpc)))
     @election_timeout = after(random_timeout) { on_election_timeout }
