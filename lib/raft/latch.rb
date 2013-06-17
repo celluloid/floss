@@ -10,7 +10,7 @@ class Raft::Latch
     @tasks = []
     @mutex = Mutex.new
     @ready = false
-    @values = nil
+    @value = nil
   end
 
   def ready?
@@ -29,25 +29,23 @@ class Raft::Latch
       ready
     end
 
-    values = if ready
-      @values
+    if ready
+      @value
     else
-      values = Celluloid.suspend(:condwait, waiter)
-      raise values if values.is_a?(LatchError)
-      values
+      value = Celluloid.suspend(:condwait, waiter)
+      raise value if value.is_a?(LatchError)
+      value
     end
-
-    values.size == 1 ? values.first : values
   end
 
-  def signal(*values)
+  def signal(value)
     @mutex.synchronize do
       return false if @ready
 
       @ready = true
-      @values = values
+      @value = value
 
-      @tasks.each { |waiter| waiter << SignalConditionRequest.new(waiter.task, values) }
+      @tasks.each { |waiter| waiter << SignalConditionRequest.new(waiter.task, value) }
     end
   end
 end
