@@ -28,7 +28,7 @@ class Floss::LogReplicator
     end
 
     def signal(peer, index)
-      waiters = @waiters.delete_if { |waiter| waiter.peer == peer && waiter.index < index }
+      waiters = @waiters.delete_if { |waiter| waiter.peer == peer && (index && waiter.index < index) }
       waiters.map(&:condition).each(&:signal)
     end
   end
