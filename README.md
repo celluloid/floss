@@ -1,4 +1,4 @@
-# Raft
+# Floss
 
 An implementation of the Raft concensus algorithm on top of Celluloid.
 
