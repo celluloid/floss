@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in raft.gemspec
+# Specify your gem's dependencies in floss.gemspec
 gemspec
 
 gem 'celluloid', github: 'celluloid/celluloid'

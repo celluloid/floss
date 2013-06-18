@@ -1,7 +1,7 @@
 $: << File.expand_path('../../lib', __FILE__)
 
-require 'raft/test_helper'
-require 'raft/proxy'
+require 'floss/test_helper'
+require 'floss/proxy'
 
 include Celluloid::Logger
 
@@ -26,8 +26,8 @@ ids = CLUSTER_SIZE.times.map do |i|
   "tcp://127.0.0.1:#{port}"
 end
 
-proxies = Raft::TestHelper.cluster(ids) do |id, peers|
-  Raft::Proxy.new(FSM.new, id: id, peers: peers)
+proxies = Floss::TestHelper.cluster(ids) do |id, peers|
+  Floss::Proxy.new(FSM.new, id: id, peers: peers)
 end
 
 proxies.sample.set(:foo, :bar)

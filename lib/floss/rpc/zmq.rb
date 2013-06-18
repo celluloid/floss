@@ -1,9 +1,9 @@
-require 'raft/rpc'
+require 'floss/rpc'
 require 'celluloid/io/stream'
 require 'celluloid/zmq'
 
-class Raft::RPC::ZMQ
-  class Client < Raft::RPC::Client
+class Floss::RPC::ZMQ
+  class Client < Floss::RPC::Client
     include Celluloid::ZMQ
 
     # @return [Celluloid::IO::Stream::Latch]
@@ -36,14 +36,14 @@ class Raft::RPC::ZMQ
     end
 
     def request(message)
-      timeout(Raft::RPC::TIMEOUT) do
+      timeout(Floss::RPC::TIMEOUT) do
         socket.send(message)
         socket.read
       end
     rescue Celluloid::Task::TimeoutError
       disconnect
       connect
-      raise Raft::TimeoutError
+      raise Floss::TimeoutError
     end
 
     def encode_request(command, payload)
@@ -55,7 +55,7 @@ class Raft::RPC::ZMQ
     end
   end
 
-  class Server < Raft::RPC::Server
+  class Server < Floss::RPC::Server
     include Celluloid::ZMQ
     include Celluloid::Logger
 

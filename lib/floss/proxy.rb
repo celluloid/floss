@@ -1,13 +1,13 @@
 require 'celluloid/proxies/abstract_proxy'
-require 'raft/node'
+require 'floss/node'
 
-# A {Raft::Proxy} wraps a FSM and runs it on a cluster.
-class Raft::Proxy < Celluloid::AbstractProxy
+# A {Floss::Proxy} wraps a FSM and runs it on a cluster.
+class Floss::Proxy < Celluloid::AbstractProxy
   # @param [Object] fsm    The fsm to expose.
-  # @param [Hash] options  Options as used by {Raft::Node}.
+  # @param [Hash] options  Options as used by {Floss::Node}.
   def initialize(fsm, options)
     @fsm = fsm
-    @node = ::Raft::Node.new(options) { |command| fsm.send(*command) }
+    @node = ::Floss::Node.new(options) { |command| fsm.send(*command) }
   end
 
   # Executes all methods exposed by the FSM in the cluster.

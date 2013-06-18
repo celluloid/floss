@@ -1,7 +1,7 @@
 require 'celluloid'
-require "raft/version"
+require "floss/version"
 
-module Raft
+module Floss
   class Error < StandardError; end
   class TimeoutError < Error; end
 end

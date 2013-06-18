@@ -1,6 +1,6 @@
-require 'raft'
+require 'floss'
 
-module Raft::TestHelper
+module Floss::TestHelper
   extend self
 
   # Takes a list of node ids and yields a list of peers for each id.

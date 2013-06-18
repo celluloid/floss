@@ -1,6 +1,6 @@
-require 'raft'
+require 'floss'
 
-module Raft::RPC
+module Floss::RPC
   TIMEOUT = 0.3
 
   class Client

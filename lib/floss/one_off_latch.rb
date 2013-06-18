@@ -1,6 +1,6 @@
-require 'raft'
+require 'floss'
 
-class Raft::OneOffLatch
+class Floss::OneOffLatch
   attr_accessor :ready
   attr_accessor :condition
 

@@ -1,13 +1,13 @@
 # Floss
 
-An implementation of the Raft concensus algorithm on top of Celluloid.
+An implementation of the [Raft concensus algorithm](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf) on top of Celluloid.
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'raft'
+gem 'floss'
 ```
 
 And then execute:
@@ -19,7 +19,7 @@ $ bundle
 Or install it yourself as:
 
 ```bash
-$ gem install raft
+$ gem install floss
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ class Counter
 end
 ```
 
-To increase reliability of your counter, you decide to distribute it across multiple machines. This is where `raft`
+To increase reliability of your counter, you decide to distribute it across multiple machines. This is where `floss`
 comes into play. To simplify this demonstration, we're going to start multiple nodes in the same process.
 
 ```ruby
@@ -60,7 +60,7 @@ addresses = [10001, 10002, 10003].map { |port| "tcp://127.0.0.1:#{port}" }
 $nodes = addresses.size.times.map do |i|
   combination = addresses.rotate(i)
   options = {listen: combination.first, peers: combination[1..-1]}
-  Raft::Proxy.new(Counter.new, options)
+  Floss::Proxy.new(Counter.new, options)
 end
 
 # Give your nodes some time to start up.

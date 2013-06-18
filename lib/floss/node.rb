@@ -1,13 +1,13 @@
 # encoding: utf-8
 
-require 'raft/rpc/zmq'
-require 'raft/log'
-require 'raft/peer'
-require 'raft/one_off_latch'
-require 'raft/count_down_latch'
-require 'raft/log_replicator'
+require 'floss/rpc/zmq'
+require 'floss/log'
+require 'floss/peer'
+require 'floss/one_off_latch'
+require 'floss/count_down_latch'
+require 'floss/log_replicator'
 
-class Raft::Node
+class Floss::Node
   include Celluloid
   include Celluloid::FSM
   include Celluloid::Logger
@@ -34,16 +34,16 @@ class Raft::Node
   # @see #election_timeout
   ELECTION_TIMEOUT = (0.150..0.300)
 
-  # @return [Raft::Log] The replicated log.
+  # @return [Floss::Log] The replicated log.
   attr_reader :log
 
   attr_reader :current_term
 
-  # @return [Raft::RPC::Server]
+  # @return [Floss::RPC::Server]
   attr_accessor :server
 
   DEFAULT_OPTIONS = {
-    rpc: Raft::RPC::ZMQ,
+    rpc: Floss::RPC::ZMQ,
     run: true
   }.freeze
 
@@ -57,10 +57,10 @@ class Raft::Node
     @handler = handler
     @options = DEFAULT_OPTIONS.merge(options)
     @current_term = 0
-    @ready_latch = Raft::OneOffLatch.new
+    @ready_latch = Floss::OneOffLatch.new
     @running = false
 
-    @log = Raft::Log.new
+    @log = Floss::Log.new
 
     async.run if @options[:run]
   end
@@ -94,9 +94,9 @@ class Raft::Node
   end
 
   # Returns peers in the cluster.
-  # @return [Array<Raft::Peer>]
+  # @return [Array<Floss::Peer>]
   def peers
-    @peers ||= @options[:peers].map { |peer| Raft::Peer.new(peer, rpc_client_class: rpc_client_class) }
+    @peers ||= @options[:peers].map { |peer| Floss::Peer.new(peer, rpc_client_class: rpc_client_class) }
   end
 
   # Returns the cluster's quorum.
@@ -154,7 +154,7 @@ class Raft::Node
 
   def execute(entry)
     if leader?
-      entry = Raft::Log::Entry.new(entry, @current_term)
+      entry = Floss::Log::Entry.new(entry, @current_term)
       @log_replicator.append(entry)
       @handler.call(entry.command) if @handler
     else
@@ -165,7 +165,7 @@ class Raft::Node
   end
 
   def wait_for_quorum_commit(index)
-    latch = Raft::CountDownLatch.new(cluster_quorum)
+    latch = Floss::CountDownLatch.new(cluster_quorum)
     peers.each { |peer| peer.signal_on_commit(index, latch) }
     latch.wait
   end
@@ -293,7 +293,7 @@ class Raft::Node
   # @group Candidate methods
 
   def start_election
-    @votes = Raft::CountDownLatch.new(cluster_quorum)
+    @votes = Floss::CountDownLatch.new(cluster_quorum)
     collect_votes
 
     @votes.wait
@@ -342,7 +342,7 @@ class Raft::Node
 
   def start_log_replication
     raise "A log replicator is already running." if @log_replicator
-    @log_replicator = link Raft::LogReplicator.new(current_actor)
+    @log_replicator = link Floss::LogReplicator.new(current_actor)
   end
 
   def stop_log_replication

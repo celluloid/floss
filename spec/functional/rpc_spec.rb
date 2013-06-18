@@ -1,6 +1,6 @@
-require 'raft/rpc'
-require 'raft/rpc/zmq'
-require 'raft/rpc/in_memory'
+require 'floss/rpc'
+require 'floss/rpc/zmq'
+require 'floss/rpc/in_memory'
 
 class TestActor
   include Celluloid
@@ -41,17 +41,17 @@ shared_examples 'an RPC implementation' do
 
   it 'raises an error if server is not available' do
      client = client_class.new(address)
-     expect { actor_run { client.call(:command, :payload) } }.to raise_error(Raft::TimeoutError)
+     expect { actor_run { client.call(:command, :payload) } }.to raise_error(Floss::TimeoutError)
   end
 
   it 'raises an error if server does not respond in time' do
     server = server_class.new(address) { |command, payload| sleep 1.5; [command, payload] }
     client = client_class.new(address)
-    expect { actor_run { client.call(:command, :payload) } }.to raise_error(Raft::TimeoutError)
+    expect { actor_run { client.call(:command, :payload) } }.to raise_error(Floss::TimeoutError)
   end
 end
 
-describe Raft::RPC::InMemory do
+describe Floss::RPC::InMemory do
   let(:address) { :node1 }
 
   before(:each) do
@@ -62,7 +62,7 @@ describe Raft::RPC::InMemory do
   it_should_behave_like 'an RPC implementation'
 end
 
-describe Raft::RPC::ZMQ do
+describe Floss::RPC::ZMQ do
   let(:address) { 'tcp://127.0.0.1:12345' }
 
   before(:each) do

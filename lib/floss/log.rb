@@ -1,8 +1,8 @@
 require 'forwardable'
-require 'raft'
+require 'floss'
 
 # See Section 5.3.
-class Raft::Log
+class Floss::Log
   include Celluloid
   extend Forwardable
 

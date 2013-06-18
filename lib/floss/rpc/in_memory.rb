@@ -1,7 +1,7 @@
-require 'raft/rpc'
+require 'floss/rpc'
 
-class Raft::RPC::InMemory
-  class Client < Raft::RPC::Client
+class Floss::RPC::InMemory
+  class Client < Floss::RPC::Client
     include Celluloid
 
     attr_accessor :address
@@ -11,9 +11,9 @@ class Raft::RPC::InMemory
     end
 
     def call(command, payload)
-      timeout(Raft::RPC::TIMEOUT) { actor.execute(command, payload) }
+      timeout(Floss::RPC::TIMEOUT) { actor.execute(command, payload) }
     rescue Celluloid::DeadActorError, Celluloid::Task::TimeoutError
-      raise Raft::TimeoutError
+      raise Floss::TimeoutError
     end
 
     def actor
@@ -21,7 +21,7 @@ class Raft::RPC::InMemory
     end
   end
 
-  class Server < Raft::RPC::Server
+  class Server < Floss::RPC::Server
     include Celluloid
 
     execute_block_on_receiver :initialize

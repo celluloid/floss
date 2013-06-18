@@ -1,8 +1,8 @@
-require 'raft'
-require 'raft/count_down_latch'
+require 'floss'
+require 'floss/count_down_latch'
 
 # Used by the leader to manage the replicated log.
-class Raft::LogReplicator
+class Floss::LogReplicator
   extend Forwardable
   include Celluloid
 
@@ -40,7 +40,7 @@ class Raft::LogReplicator
   # TODO: Pass those to the constructor: They don't change during a term.
   def_delegators :node, :cluster_quorum, :broadcast_time, :current_term
 
-  # @return [Raft::Node]
+  # @return [Floss::Node]
   attr_accessor :node
 
   def initialize(node)
@@ -63,7 +63,7 @@ class Raft::LogReplicator
     pause
     index = log.append([entry])
 
-    quorum = Raft::CountDownLatch.new(cluster_quorum)
+    quorum = Floss::CountDownLatch.new(cluster_quorum)
     peers.each { |peer| signal_on_write(peer, index, quorum) }
 
     resume

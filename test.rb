@@ -1,6 +1,6 @@
 $: << File.expand_path('../lib', __FILE__)
 
-require 'raft/node'
+require 'floss/node'
 
 CLUSTER_SIZE = 5
 
@@ -14,7 +14,7 @@ supervisor = Celluloid::SupervisionGroup.run!
 CLUSTER_SIZE.times.map do |i|
   combination = nodes.rotate(i)
   options = {id: combination.first, peers: combination[1..-1]}
-  supervisor.supervise(Raft::Node, options)
+  supervisor.supervise(Floss::Node, options)
 end
 
 sleep 1

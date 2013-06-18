@@ -1,7 +1,7 @@
 require 'celluloid'
-require 'raft'
+require 'floss'
 
-class Raft::CountDownLatch
+class Floss::CountDownLatch
   # @return [Fixnum] Current count.
   attr_reader :count
 

@@ -1,8 +1,8 @@
 require 'celluloid'
-require 'raft'
+require 'floss'
 
 # Based on Celluloid::Condition.
-class Raft::Latch
+class Floss::Latch
   SignalConditionRequest = Celluloid::SignalConditionRequest
   class LatchError < Celluloid::Error; end
 

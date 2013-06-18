@@ -1,20 +1,20 @@
-require 'raft'
-require 'raft/rpc/zmq'
+require 'floss'
+require 'floss/rpc/zmq'
 
 # A peer is a remote node within the same cluster.
-class Raft::Peer
+class Floss::Peer
   include Celluloid::Logger
 
   # @return [String] Remote address of the peer.
   attr_accessor :id
 
-  # @return [Raft::RPC::Client]
+  # @return [Floss::RPC::Client]
   attr_accessor :client
 
   def initialize(id, opts = {})
     self.id = id
 
-    client_class = opts[:rpc_client_class] || Raft::RPC::ZMQ::Client
+    client_class = opts[:rpc_client_class] || Floss::RPC::ZMQ::Client
     self.client = client_class.new(id)
   end
 

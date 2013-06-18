@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-require File.expand_path('../lib/raft/version', __FILE__)
+require File.expand_path('../lib/floss/version', __FILE__)
 
 Gem::Specification.new do |gem|
   gem.authors       = ["Alexander Flatter"]
@@ -11,9 +11,9 @@ Gem::Specification.new do |gem|
   gem.files         = `git ls-files`.split($\)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
-  gem.name          = "raft"
+  gem.name          = "floss"
   gem.require_paths = ["lib"]
-  gem.version       = Raft::VERSION
+  gem.version       = Floss::VERSION
 
   gem.add_development_dependency 'rspec'
   gem.add_runtime_dependency 'celluloid-zmq'
