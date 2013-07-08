@@ -14,6 +14,9 @@ class Floss::RPC::ZMQ
     # @return [Celluloid::ZMQ::ReqSocket]
     attr_accessor :socket
 
+    # Disconnect when shutting the client down.
+    finalizer :disconnect
+
     def initialize(address)
       self.latch = Celluloid::IO::Stream::Latch.new
       self.address = address
