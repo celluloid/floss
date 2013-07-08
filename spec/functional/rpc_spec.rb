@@ -40,14 +40,16 @@ shared_examples 'an RPC implementation' do
   end
 
   it 'raises an error if server is not available' do
-     client = client_class.new(address)
-     expect { actor_run { client.call(:command, :payload) } }.to raise_error(Floss::TimeoutError)
+    client = client_class.new(address)
+    expect { actor_run { client.call(:command, :payload) } }.to raise_error(Floss::TimeoutError)
+    expect { client.to be_alive }
   end
 
   it 'raises an error if server does not respond in time' do
     server = server_class.new(address) { |command, payload| sleep 1.5; [command, payload] }
     client = client_class.new(address)
     expect { actor_run { client.call(:command, :payload) } }.to raise_error(Floss::TimeoutError)
+    expect { client.to be_alive }
   end
 end
 

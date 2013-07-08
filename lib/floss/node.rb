@@ -318,7 +318,13 @@ class Floss::Node
 
   # TODO: The candidate should retry the RPC if a peer doesn't answer.
   def request_vote(peer, payload)
-    response = peer.request_vote(payload)
+    response = begin
+                 peer.request_vote(payload)
+               rescue Floss::TimeoutError
+                 debug("A vote request to #{peer.id} timed out. Retrying.")
+                 retry
+               end
+
     term = response[:term]
 
     # Ignore old responses.

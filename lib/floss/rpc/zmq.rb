@@ -46,7 +46,7 @@ class Floss::RPC::ZMQ
     rescue Celluloid::Task::TimeoutError
       disconnect
       connect
-      raise Floss::TimeoutError
+      abort Floss::TimeoutError.new("RPC timed out (#{address}).")
     end
 
     def encode_request(command, payload)
