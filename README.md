@@ -1,6 +1,6 @@
 # Floss
 
-An implementation of the [Raft concensus algorithm](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf) on top of Celluloid.
+An implementation of the [Raft consensus algorithm](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf) on top of Celluloid.
 
 ## Installation
 
