@@ -59,7 +59,7 @@ addresses = [10001, 10002, 10003].map { |port| "tcp://127.0.0.1:#{port}" }
 
 $nodes = addresses.size.times.map do |i|
   combination = addresses.rotate(i)
-  options = {listen: combination.first, peers: combination[1..-1]}
+  options = {id: combination.first, peers: combination[1..-1]}
   Floss::Proxy.new(Counter.new, options)
 end
 
