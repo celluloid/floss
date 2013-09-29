@@ -1,0 +1,3 @@
+before_install: sudo apt-get install libzmq3-dev
+script: bundle exec rake
+language: ruby
