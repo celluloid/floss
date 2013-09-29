@@ -1,5 +1,6 @@
 require 'floss/log'
 require 'floss/log/simple'
+require 'floss/log/redis'
 
 shared_examples 'a Log implementation' do
 
@@ -55,5 +56,9 @@ shared_examples 'a Log implementation' do
 end
 
 describe Floss::Log::Simple do
+  it_should_behave_like 'a Log implementation'
+end
+
+describe Floss::Log::Redis do
   it_should_behave_like 'a Log implementation'
 end

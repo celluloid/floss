@@ -69,7 +69,7 @@ class Floss::Node
     raise 'Already running' if @running
 
     @running = true
-    @log = @options[:log].new
+    @log = @options[:log].new @options
 
     self.server = link(rpc_server_class.new(id, &method(:handle_rpc)))
     @election_timeout = after(random_timeout) { on_election_timeout }
