@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/celluloid/floss.png?branch=master)](http://travis-ci.org/celluloid/floss)
+
 # Floss
 
 An implementation of the [Raft consensus algorithm](https://ramcloud.stanford.edu/wiki/download/attachments/11370504/raft.pdf) on top of Celluloid.
