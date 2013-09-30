@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 require 'floss/rpc/zmq'
+require 'floss/log/simple'
 require 'floss/log'
 require 'floss/peer'
 require 'floss/one_off_latch'
@@ -44,6 +45,7 @@ class Floss::Node
 
   DEFAULT_OPTIONS = {
     rpc: Floss::RPC::ZMQ,
+    log: Floss::Log::Simple,
     run: true
   }.freeze
 
@@ -67,7 +69,7 @@ class Floss::Node
     raise 'Already running' if @running
 
     @running = true
-    @log = Floss::Log.new
+    @log = @options[:log].new
 
     self.server = link(rpc_server_class.new(id, &method(:handle_rpc)))
     @election_timeout = after(random_timeout) { on_election_timeout }
