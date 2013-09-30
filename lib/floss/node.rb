@@ -156,6 +156,9 @@ class Floss::Node
   def execute(entry)
     if leader?
       entry = Floss::Log::Entry.new(entry, @current_term)
+
+      # Replicate entry to all peers, then apply it.
+      # TODO: Failure handling.
       @log_replicator.append(entry)
       @handler.call(entry.command) if @handler
     else
