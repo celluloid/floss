@@ -18,6 +18,7 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'rspec'
   gem.add_development_dependency 'rake'
+  gem.add_development_dependency 'fakeredis'
   gem.add_runtime_dependency 'celluloid-zmq'
   gem.add_runtime_dependency 'celluloid-io'
 end

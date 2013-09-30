@@ -6,6 +6,7 @@ gemspec
 gem 'celluloid', github: 'celluloid/celluloid'
 gem 'celluloid-io', github: 'celluloid/celluloid-io'
 gem 'celluloid-zmq', github: 'celluloid/celluloid-zmq'
+gem 'celluloid-redis', github: 'celluloid/celluloid-redis'
 
 group :docs do
   gem 'yard'
