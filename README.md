@@ -1,4 +1,5 @@
-[![Build Status](https://secure.travis-ci.org/celluloid/floss.png?branch=master)](http://travis-ci.org/celluloid/floss)
+[![Build Status](https://secure.travis-ci.org/celluloid/floss.svg?branch=master)](http://travis-ci.org/celluloid/floss)
+[![Maintained: no](https://img.shields.io/maintenance/no/2013.svg)](https://github.com/celluloid/celluloid/issues/779)
 
 # Floss
 
