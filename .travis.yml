@@ -1,3 +1,6 @@
-before_install: sudo apt-get install libzmq3-dev
+before_install: 
+ - sudo add-apt-repository ppa:adrian-wilkins/kyoto-cabinet -y
+ - sudo apt-get update -y
+ - sudo apt-get install  libkyotocabinet-dev libkyotocabinet16 libzmq3-dev -y
 script: bundle exec rake
 language: ruby
